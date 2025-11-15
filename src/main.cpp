@@ -28,8 +28,8 @@
 #define REALTIME_DATABASE_URL "cat-automated-smart-home-default-rtdb.firebaseio.com"
 
 // Network credentials (will not be pushed)
-const char* WIFI_SSID = "...";
-const char* WIFI_PASSWORD = "...";
+const char* WIFI_SSID = "Eddie";
+const char* WIFI_PASSWORD = "Eddiek1102!";
 
 
 // ============================================================================
@@ -42,12 +42,17 @@ uint8_t last_temperature_sensor_state = 0;
 // ============================================================================
 //                    CAMERA (SERVO) ORIENTATION VARIABLES
 // ============================================================================
-Servo camera_servo;
+Servo camera_servo_left_right;
+Servo camera_servo_up_down;
 
 // Camera movement tracking
-int current_servo_pos = 90;
+int left_right_servo_pos = 90;
 uint8_t servo_left = 0;
 uint8_t servo_right = 0;
+
+int up_down_servo_pos = 90;
+uint8_t servo_up = 0;
+uint8_t servo_down = 0;
 
 
 // ============================================================================
@@ -66,8 +71,10 @@ void setup(void) {
   digitalWrite(TEMPERATURE_SENSOR_PIN, LOW);
 
   // Setup servos for camera orientation and movement
-  camera_servo.attach(CAMERA_LEFT_RIGHT_PIN);
-  camera_servo.write(current_servo_pos);
+  camera_servo_left_right.attach(CAMERA_LEFT_RIGHT_PIN);
+  camera_servo_left_right.write(left_right_servo_pos);
+  camera_servo_up_down.attach(CAMERA_UP_DOWN_PIN);
+  camera_servo_up_down.write(up_down_servo_pos);
 
   delay(100);
 
@@ -121,6 +128,20 @@ void setup(void) {
     }
     else {
       Serial.printf("Listener for servo_right setup successful\n");
+    }
+
+    if (!Firebase.beginStream(servo_up_data, "/camera_servo/up")) {
+      Serial.printf("Failed to set up listener for servo_up: %s\n", servo_up_data.errorReason());
+    }
+    else {
+      Serial.printf("Listener for servo_up setup successful\n");
+    }
+
+    if (!Firebase.beginStream(servo_down_data, "/camera_servo/down")) {
+      Serial.printf("Failed to set up listener for servo_down: %s\n", servo_down_data.errorReason());
+    }
+    else {
+      Serial.printf("Listener for servo_down setup successful\n");
     }
   }
   else {
@@ -217,17 +238,51 @@ void loop(void) {
     servo_right = servo_right_data.intData();
   }
 
-  // Servo movement handling
+  // Servo up stream handling
+  if (!Firebase.readStream(servo_up_data)) {
+    if (servo_up_data.streamTimeout()) {
+      Firebase.beginStream(servo_up_data, "/camera_servo/up");
+    }
+  }
+  if (servo_up_data.streamAvailable()) {
+    servo_up = servo_up_data.intData();
+  }
+
+  // Servo down stream handling
+  if (!Firebase.readStream(servo_down_data)) {
+    if (servo_down_data.streamTimeout()) {
+      Firebase.beginStream(servo_down_data, "/camera_servo/down");
+    }
+  }
+  if (servo_down_data.streamAvailable()) {
+    servo_down = servo_down_data.intData();
+  }
+
+  // Servo left/right movement handling
   if (servo_left == 1 && servo_right == 0) {
-    if (current_servo_pos > 0) {
-      current_servo_pos -= 5;
-      camera_servo.write(current_servo_pos);
+    if (left_right_servo_pos > 0) {
+      left_right_servo_pos -= 5;
+      camera_servo_left_right.write(left_right_servo_pos);
     }
   }
   else if (servo_left == 0 && servo_right == 1) {
-    if (current_servo_pos < 180) {
-      current_servo_pos += 5;
-      camera_servo.write(current_servo_pos);
+    if (left_right_servo_pos < 180) {
+      left_right_servo_pos += 5;
+      camera_servo_left_right.write(left_right_servo_pos);
+    }
+  }
+
+  // Servo up/down movement handling
+  if (servo_up == 1 && servo_down == 0) {
+    if (up_down_servo_pos > 0) {
+      up_down_servo_pos -= 5;
+      camera_servo_up_down.write(up_down_servo_pos);
+    }
+  }
+  else if (servo_up == 0 && servo_down == 1) {
+    if (up_down_servo_pos < 180) {
+      up_down_servo_pos += 5;
+      camera_servo_up_down.write(up_down_servo_pos);
     }
   }
 
