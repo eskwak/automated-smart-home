@@ -16,9 +16,10 @@
  * Last Modified:   11/15/2025
  */
 
-#include <Arduino.h>
 #include <WiFi.h>
-#include <FirebaseESP32.h>
+
+#include "firebase_config.h"
+#include "gpio.h"
 
 // ============================================================================
 //                               CONFIGURATION
@@ -30,30 +31,6 @@
 
 // const char* WIFI SSID = "...";
 // const char* WIFI_PASSWORD = "...";
-
-
-// ============================================================================
-//                                   GPIO
-// ============================================================================
-// Heating pad control pin
-const uint8_t HEATING_PAD_PIN = 5;
-
-// Temperature sensor pin
-const uint8_t TEMPERATURE_SENSOR_PIN = 18;
-
-
-// ============================================================================
-//                      FIREBASE CONFIGURATION OBJECTS
-// ============================================================================
-// Holds RTDB data and stream info
-FirebaseData heating_pad_data;
-FirebaseData temperature_sensor_data;
-
-// Firebase auth object
-FirebaseAuth firebase_auth;
-
-// Firebase config object
-FirebaseConfig firebase_config;
 
 
 // ============================================================================
