@@ -17,7 +17,7 @@
  */
 
 #include <WiFi.h>
-
+#include <ESP32Servo.h>
 #include "firebase_config.h"
 #include "gpio.h"
 
@@ -28,7 +28,8 @@
 #define REALTIME_DATABASE_URL "cat-automated-smart-home-default-rtdb.firebaseio.com"
 
 // Network credentials (will not be pushed)
-
+const char* WIFI_SSID = "Eddie";
+const char* WIFI_PASSWORD = "Eddiek1102!";
 // const char* WIFI SSID = "...";
 // const char* WIFI_PASSWORD = "...";
 
@@ -38,6 +39,17 @@
 // ============================================================================
 uint8_t last_heating_pad_state = 0;
 uint8_t last_temperature_sensor_state = 0;
+
+
+// ============================================================================
+//                    CAMERA (SERVO) ORIENTATION VARIABLES
+// ============================================================================
+Servo camera_servo;
+
+// Camera movement tracking
+int current_servo_pos = 90;
+uint8_t servo_left = 0;
+uint8_t servo_right = 0;
 
 
 // ============================================================================
@@ -54,6 +66,10 @@ void setup(void) {
   // GPIO initializations
   digitalWrite(HEATING_PAD_PIN, LOW);
   digitalWrite(TEMPERATURE_SENSOR_PIN, LOW);
+
+  // Setup servos for camera orientation and movement
+  camera_servo.attach(CAMERA_LEFT_RIGHT_PIN);
+  camera_servo.write(current_servo_pos);
 
   delay(100);
 
@@ -93,6 +109,20 @@ void setup(void) {
     }
     else {
       Serial.printf("Listener for temperature_sensor setup successful\n");
+    }
+
+    if (!Firebase.beginStream(servo_left_data, "/camera_servo/left")) {
+      Serial.printf("Failed to set up listener for servo_left: %s\n", servo_left_data.errorReason());
+    }
+    else {
+      Serial.printf("Listener for servo_left setup successful\n");
+    }
+
+    if (!Firebase.beginStream(servo_right_data, "/camera_servo/right")) {
+      Serial.printf("Failed to set up listener for servo_right: %s\n", servo_right_data.errorReason());
+    }
+    else {
+      Serial.printf("Listener for servo_right setup successful\n");
     }
   }
   else {
@@ -167,6 +197,40 @@ void loop(void) {
     if (temperature_sensor_state != last_temperature_sensor_state) last_temperature_sensor_state = temperature_sensor_state;
     if (temperature_sensor_state == 1) digitalWrite(TEMPERATURE_SENSOR_PIN, HIGH);
     else digitalWrite(TEMPERATURE_SENSOR_PIN, LOW);
+  }
+
+  // Servo left stream handling
+  if (!Firebase.readStream(servo_left_data)) {
+    if (servo_left_data.streamTimeout()) {
+      Firebase.beginStream(servo_left_data, "/camera_servo/left");
+    }
+  }
+  if (servo_left_data.streamAvailable()) {
+    servo_left = servo_left_data.intData();
+  }
+
+  // Servo right stream handling
+  if (!Firebase.readStream(servo_right_data)) {
+    if (servo_right_data.streamTimeout()) {
+      Firebase.beginStream(servo_right_data, "/camera_servo/right");
+    }
+  }
+  if (servo_right_data.streamAvailable()) {
+    servo_right = servo_right_data.intData();
+  }
+
+  // Servo movement handling
+  if (servo_left == 1 && servo_right == 0) {
+    if (current_servo_pos > 0) {
+      current_servo_pos -= 5;
+      camera_servo.write(current_servo_pos);
+    }
+  }
+  else if (servo_left == 0 && servo_right == 1) {
+    if (current_servo_pos < 180) {
+      current_servo_pos += 5;
+      camera_servo.write(current_servo_pos);
+    }
   }
 
   delay(100);

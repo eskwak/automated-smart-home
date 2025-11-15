@@ -12,5 +12,6 @@
 
 const uint8_t HEATING_PAD_PIN = 5;
 const uint8_t TEMPERATURE_SENSOR_PIN = 18;
+const uint8_t CAMERA_LEFT_RIGHT_PIN = 19;
 
 #endif

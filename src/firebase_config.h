@@ -13,6 +13,8 @@
 // Holds RTDB data and stream info
 FirebaseData heating_pad_data;
 FirebaseData temperature_sensor_data;
+FirebaseData servo_left_data;
+FirebaseData servo_right_data;
 
 // Firebase auth object
 FirebaseAuth firebase_auth;
