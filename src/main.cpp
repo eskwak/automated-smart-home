@@ -28,9 +28,8 @@
 #define REALTIME_DATABASE_URL "cat-automated-smart-home-default-rtdb.firebaseio.com"
 
 // Network credentials (will not be pushed)
-
-// const char* WIFI SSID = "...";
-// const char* WIFI_PASSWORD = "...";
+const char* WIFI_SSID = "...";
+const char* WIFI_PASSWORD = "...";
 
 
 // ============================================================================
