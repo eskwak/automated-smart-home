@@ -45,14 +45,16 @@ uint8_t last_temperature_sensor_state = 0;
 Servo camera_servo_left_right;
 Servo camera_servo_up_down;
 
-// Camera movement tracking
-int left_right_servo_pos = 90;
-uint8_t servo_left = 0;
-uint8_t servo_right = 0;
+// Camera positions (0-180)
+int camera_left_right_servo_pos = 90;
+int camera_up_down_servo_pos = 90;
 
-int up_down_servo_pos = 90;
-uint8_t servo_up = 0;
-uint8_t servo_down = 0;
+Servo laser_servo_left_right;
+Servo laser_servo_up_down;
+
+// laser positions 
+int laser_left_right_servo_pos = 90;
+int laser_up_down_servo_pos = 90;
 
 
 // ============================================================================
@@ -72,9 +74,14 @@ void setup(void) {
 
   // Setup servos for camera orientation and movement
   camera_servo_left_right.attach(CAMERA_LEFT_RIGHT_PIN);
-  camera_servo_left_right.write(left_right_servo_pos);
+  camera_servo_left_right.write(camera_left_right_servo_pos);
   camera_servo_up_down.attach(CAMERA_UP_DOWN_PIN);
-  camera_servo_up_down.write(up_down_servo_pos);
+  camera_servo_up_down.write(camera_up_down_servo_pos);
+
+  laser_servo_left_right.attach(LASER_LEFT_RIGHT_PIN);
+  laser_servo_left_right.write(laser_left_right_servo_pos);
+  laser_servo_up_down.attach(LASER_UP_DOWN_PIN);
+  laser_servo_up_down.write(laser_up_down_servo_pos);
 
   delay(100);
 
@@ -102,6 +109,7 @@ void setup(void) {
 
   // Setup for RTDB listeners
   if (Firebase.ready()) {
+    // Heating pad listener
     if (!Firebase.beginStream(heating_pad_data, "/heating_pad/state")) {
       Serial.printf("Failed to set up listener for heating_pad. ERROR: %s\n", heating_pad_data.errorReason());
     }
@@ -109,6 +117,7 @@ void setup(void) {
       Serial.printf("Listener for heating_pad setup successful\n");
     }
 
+    // Temperature sensor listener
     if (!Firebase.beginStream(temperature_sensor_data, "/temperature_sensor/state")) {
       Serial.printf("Failed to set up listener for temperature_sensor. ERROR: %s\n", temperature_sensor_data.errorReason());
     }
@@ -116,32 +125,36 @@ void setup(void) {
       Serial.printf("Listener for temperature_sensor setup successful\n");
     }
 
-    if (!Firebase.beginStream(servo_left_data, "/camera_servo/left")) {
-      Serial.printf("Failed to set up listener for servo_left: %s\n", servo_left_data.errorReason());
+    // Camera left/right position listener
+    if (!Firebase.beginStream(servo_x_angle_data, "/camera_servo/x_angle")) {
+      Serial.printf("Failed to set up listener for servo_x_angle_data: %s\n", servo_x_angle_data.errorReason());
     }
     else {
-      Serial.printf("Listener for servo_left setup successful\n");
+      Serial.printf("Listener for servo_x_angle setup successful\n");
     }
 
-    if (!Firebase.beginStream(servo_right_data, "/camera_servo/right")) {
-      Serial.printf("Failed to set up listener for servo_right: %s\n", servo_right_data.errorReason());
+    // Camera up/down position listener
+    if (!Firebase.beginStream(servo_y_angle_data, "/camera_servo/y_angle")) {
+      Serial.printf("Failed to set up listener for servo_y_angle_data: %s\n", servo_y_angle_data.errorReason());
     }
     else {
-      Serial.printf("Listener for servo_right setup successful\n");
+      Serial.printf("Listener for servo_y_angle setup succesful\n");
     }
 
-    if (!Firebase.beginStream(servo_up_data, "/camera_servo/up")) {
-      Serial.printf("Failed to set up listener for servo_up: %s\n", servo_up_data.errorReason());
+    // Laser left/right position listener
+    if (!Firebase.beginStream(laser_x_angle_data, "/laser_servo/x_angle")) {
+      Serial.printf("Failed to set up listener for laser_x_angle: %s\n", laser_x_angle_data.errorReason());
     }
     else {
-      Serial.printf("Listener for servo_up setup successful\n");
+      Serial.printf("Listener for laser_x_angle setup successful\n");
     }
 
-    if (!Firebase.beginStream(servo_down_data, "/camera_servo/down")) {
-      Serial.printf("Failed to set up listener for servo_down: %s\n", servo_down_data.errorReason());
+    // Laser up/down position listener
+    if (!Firebase.beginStream(laser_y_angle_data, "/laser_servo/y_angle")) {
+      Serial.printf("Failed to set up listener for laser_y_angle: %s\n", laser_y_angle_data.errorReason());
     }
     else {
-      Serial.printf("Listener for servo_down setup successful\n");
+      Serial.printf("Listener for laser_y_angle setup successful\n");
     }
   }
   else {
@@ -174,7 +187,7 @@ void loop(void) {
       }
 
       if (Firebase.ready() && !temperature_sensor_data.streamTimeout()) {
-        if (!Firebase.beginStream(temperature_sensor_data, "temperature_sensor/state")) {
+        if (!Firebase.beginStream(temperature_sensor_data, "/temperature_sensor/state")) {
           Serial.printf("ERROR: %s\n", temperature_sensor_data.errorReason());
         }
         else {
@@ -218,73 +231,57 @@ void loop(void) {
     else digitalWrite(TEMPERATURE_SENSOR_PIN, LOW);
   }
 
-  // Servo left stream handling
-  if (!Firebase.readStream(servo_left_data)) {
-    if (servo_left_data.streamTimeout()) {
-      Firebase.beginStream(servo_left_data, "/camera_servo/left");
+  // Camera servo left/right angle handling
+  if (!Firebase.readStream(servo_x_angle_data)) {
+    if (servo_x_angle_data.streamTimeout()) {
+      Firebase.beginStream(servo_x_angle_data, "/camera_servo/x_angle");
     }
   }
-  if (servo_left_data.streamAvailable()) {
-    servo_left = servo_left_data.intData();
+  if (servo_x_angle_data.streamAvailable()) {
+    int x_angle = servo_x_angle_data.intData();
+    x_angle = constrain(x_angle, 0, 180);
+    camera_left_right_servo_pos = x_angle;
+    camera_servo_left_right.write(camera_left_right_servo_pos);
   }
 
-  // Servo right stream handling
-  if (!Firebase.readStream(servo_right_data)) {
-    if (servo_right_data.streamTimeout()) {
-      Firebase.beginStream(servo_right_data, "/camera_servo/right");
+  // Camera servo up/down angle handling
+  if (!Firebase.readStream(servo_y_angle_data)) {
+    if (servo_y_angle_data.streamTimeout()) {
+      Firebase.beginStream(servo_y_angle_data, "/camera_servo/y_angle");
     }
   }
-  if (servo_right_data.streamAvailable()) {
-    servo_right = servo_right_data.intData();
+  if (servo_y_angle_data.streamAvailable()) {
+    int y_angle = servo_y_angle_data.intData();
+    y_angle = constrain(y_angle, 0, 180);
+    camera_up_down_servo_pos = y_angle;
+    camera_servo_up_down.write(camera_up_down_servo_pos);
   }
 
-  // Servo up stream handling
-  if (!Firebase.readStream(servo_up_data)) {
-    if (servo_up_data.streamTimeout()) {
-      Firebase.beginStream(servo_up_data, "/camera_servo/up");
+  // Laser servo left/right angle handling
+  if (!Firebase.readStream(laser_x_angle_data)) {
+    if (laser_x_angle_data.streamTimeout()) {
+      Firebase.beginStream(laser_x_angle_data, "/laser_servo/x_angle");
     }
   }
-  if (servo_up_data.streamAvailable()) {
-    servo_up = servo_up_data.intData();
+  if (laser_x_angle_data.streamAvailable()) {
+    int laser_x_angle = laser_x_angle_data.intData();
+    laser_x_angle = constrain(laser_x_angle, 10, 170);
+    laser_left_right_servo_pos = laser_x_angle;
+    laser_servo_left_right.write(laser_left_right_servo_pos);
   }
 
-  // Servo down stream handling
-  if (!Firebase.readStream(servo_down_data)) {
-    if (servo_down_data.streamTimeout()) {
-      Firebase.beginStream(servo_down_data, "/camera_servo/down");
+  // Laser servo up/down angle handling
+  if (!Firebase.readStream(laser_y_angle_data)) {
+    if (laser_y_angle_data.streamTimeout()) {
+      Firebase.beginStream(laser_y_angle_data, "/laser_servo/y_angle");
     }
   }
-  if (servo_down_data.streamAvailable()) {
-    servo_down = servo_down_data.intData();
+  if (laser_y_angle_data.streamAvailable()) {
+    int laser_y_angle = laser_y_angle_data.intData();
+    laser_y_angle = constrain(laser_y_angle, 10, 170);
+    laser_up_down_servo_pos = laser_y_angle;
+    laser_servo_up_down.write(laser_up_down_servo_pos);
   }
 
-  // Servo left/right movement handling
-  if (servo_left == 1 && servo_right == 0) {
-    if (left_right_servo_pos > 0) {
-      left_right_servo_pos -= 5;
-      camera_servo_left_right.write(left_right_servo_pos);
-    }
-  }
-  else if (servo_left == 0 && servo_right == 1) {
-    if (left_right_servo_pos < 180) {
-      left_right_servo_pos += 5;
-      camera_servo_left_right.write(left_right_servo_pos);
-    }
-  }
-
-  // Servo up/down movement handling
-  if (servo_up == 1 && servo_down == 0) {
-    if (up_down_servo_pos > 0) {
-      up_down_servo_pos -= 5;
-      camera_servo_up_down.write(up_down_servo_pos);
-    }
-  }
-  else if (servo_up == 0 && servo_down == 1) {
-    if (up_down_servo_pos < 180) {
-      up_down_servo_pos += 5;
-      camera_servo_up_down.write(up_down_servo_pos);
-    }
-  }
-
-  delay(100);
+  delay(20);
 }
