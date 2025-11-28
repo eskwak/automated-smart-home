@@ -37,7 +37,14 @@ import {
 //                              CONFIGURATION
 // ============================================================================
 // These configs won't be pushed. Just text me for them if you need to test.
-
+const firebaseConfig = {
+    apiKey: "AIzaSyCw4KulOclsZXzoyWpqFH2bhdI88SZNstU",
+    authDomain: "cat-automated-smart-home.firebaseapp.com",
+    projectId: "cat-automated-smart-home",
+    storageBucket: "cat-automated-smart-home.firebasestorage.app",
+    messagingSenderId: "305184458497",
+    appId: "1:305184458497:web:20f009e9b16ce9136b7d00",
+};
 // const firebaseConfig = {
 //     apiKey: "...",
 //     authDomain: "...",
